@@ -255,8 +255,28 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<div id="setup-screen" style="display:block;">
-  <div id="app" style="display:none;">
+<div id="setup-screen" style="display:none;">
+  <div class="header">
+    <div style="font-size:16px;font-weight:500;">Aanwezigheidsrooster</div>
+    <div style="font-size:12px;color:var(--text-sec);margin-left:8px;">— eerste keer instellen</div>
+  </div>
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <h2>Eénmalige instelling</h2>
+      <p>Het rooster slaat data op in Microsoft Lists op jullie SharePoint. Vul hieronder de URL in van de SharePoint-site. Daarna werkt alles automatisch.</p>
+      <p><span class="step-num">1</span> Ga naar jullie SharePoint-site (bijv. via Teams).</p>
+      <p><span class="step-num">2</span> Kopieer de URL uit de adresbalk: <code>https://bedrijfsnaam.sharepoint.com/sites/Teamnaam</code></p>
+      <p><span class="step-num">3</span> Plak de URL hieronder en klik op Verbinden.</p>
+      <input type="text" id="setup-url" placeholder="https://bedrijfsnaam.sharepoint.com/sites/Teamnaam">
+      <button class="btn btn-primary" onclick="setupAndConnect()" style="width:100%;padding:10px;margin-top:8px;">Verbinden met SharePoint</button>
+    </div>
+    <div class="setup-card">
+      <h2>Hoe werkt dit?</h2>
+      <p>Het rooster gebruikt de SharePoint REST API — dit werkt automatisch met je Microsoft 365-account. Er is geen app-registratie of IT-beheerder nodig.</p>
+    </div>
+  </div>
+</div>
+<div id="app" style="display:none;">
 <div class="header">
     <div class="header-title" style="font-size:16px;font-weight:500;">Aanwezigheidsrooster</div>
     <div style="font-size:12px;color:var(--text-sec);margin-left:8px;">— eerste keer instellen</div>
