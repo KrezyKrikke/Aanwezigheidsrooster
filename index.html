@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aanwezigheidsrooster</title>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg-sec: #f7f7f5;
+    --bg-ter: #f0efeb;
+    --bg-info: #e6f1fb;
+    --bg-danger: #fcebeb;
+    --text: #1a1a18;
+    --text-sec: #6b6b67;
+    --text-ter: #a0a09b;
+    --text-info: #0c447c;
+    --text-danger: #791f1f;
+    --border: rgba(0,0,0,0.12);
+    --border-sec: rgba(0,0,0,0.22);
+    --border-info: rgba(24,95,165,0.4);
+    --border-danger: rgba(163,45,45,0.4);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg-sec: #252523;
+      --bg-ter: #2e2e2b;
+      --bg-info: #0c2a4a;
+      --bg-danger: #3a1212;
+      --text: #f0efe9;
+      --text-sec: #a0a09b;
+      --text-ter: #6b6b67;
+      --text-info: #85b7eb;
+      --text-danger: #f09595;
+      --border: rgba(255,255,255,0.1);
+      --border-sec: rgba(255,255,255,0.2);
+    }
+  }
+
+  body { font-family: var(--font); background: var(--bg-ter); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+  .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+  .header .subtitle { font-size: 12px; color: var(--text-sec); }
+
+  .main { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+
+  .tabs { display: flex; gap: 0; border-bottom: 0.5px solid var(--border); margin-bottom: 20px; }
+  .tab { padding: 9px 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 0.5px solid transparent; border-bottom: none; border-radius: var(--radius-md) var(--radius-md) 0 0; color: var(--text-sec); background: transparent; }
+  .tab.active { border-color: var(--border); background: var(--bg); color: var(--text); margin-bottom: -0.5px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .month-nav { display: flex; align-items: center; gap: 8px; }
+  .month-nav button { padding: 6px 12px; font-size: 13px; cursor: pointer; background: var(--bg); border: 0.5px solid var(--border-sec); border-radius: var(--radius-md); color: var(--text); }
+  .month-nav button:hover { background: var(--bg-sec); }
+  .month-label { font-size: 15px; font-weight: 500; color: var(--text); min-width: 170px; text-align: center; }
+
+  button { font-family: var(--font); }
+  .btn { padding: 7px 16px; font-size: 13px; cursor: pointer; border: 0.5px solid var(--border-sec); border-radius: var(--radius-md); background: var(--bg); color: var(--text); }
+  .btn:hover { background: var(--bg-sec); }
+  .btn-primary { background: var(--bg-info); color: var(--text-info); border-color: var(--border-info); }
+  .btn-primary:hover { filter: brightness(0.95); }
+  .btn-danger { background: var(--bg-danger); color: var(--text-danger); border-color: var(--border-danger); }
+
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-sec); }
+  .leg-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .roster-wrap { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: var(--bg-sec); padding: 7px 4px; text-align: center; border: 0.5px solid var(--border); font-weight: 500; color: var(--text-sec); white-space: nowrap; position: sticky; top: 0; z-index: 2; }
+  thead th.name-col { text-align: left; padding-left: 12px; min-width: 150px; position: sticky; left: 0; z-index: 4; }
+  thead th.disc-col { min-width: 110px; position: sticky; left: 150px; z-index: 3; }
+  td { padding: 5px 3px; text-align: center; border: 0.5px solid var(--border); vertical-align: middle; }
+  td.name-col { text-align: left; padding-left: 12px; font-weight: 500; color: var(--text); position: sticky; left: 0; background: var(--bg); z-index: 1; white-space: nowrap; cursor: pointer; }
+  td.disc-col { position: sticky; left: 150px; background: var(--bg); z-index: 1; font-size: 11px; color: var(--text-sec); }
+  tr:hover td { background: var(--bg-sec); }
+  tr:hover td.name-col, tr:hover td.disc-col { background: var(--bg-sec); }
+  td.holiday { background: #faeeda; }
+  td.day-cell { cursor: pointer; min-width: 30px; }
+  td.day-cell:hover { filter: brightness(0.93); }
+
+  .status-dot { display: inline-block; width: 24px; height: 24px; border-radius: 50%; line-height: 24px; font-size: 11px; font-weight: 500; text-align: center; }
+  .s-w { background: #e1f5ee; color: #085041; }
+  .s-v { background: #e6f1fb; color: #0c447c; }
+  .s-z { background: #fcebeb; color: #791f1f; }
+  .s-t { background: #eeedfe; color: #3c3489; }
+  .s-s { background: #faeeda; color: #633806; }
+  .s-zv { background: #fbeaf0; color: #72243e; }
+  .s-feest { background: #fac775; color: #412402; font-size: 10px; }
+  .s-none { background: transparent; }
+  .day-info { font-size: 10px; color: var(--text-ter); display: block; }
+
+  .empty-state { padding: 4rem; text-align: center; color: var(--text-ter); font-size: 14px; }
+  .empty-state i { font-size: 36px; display: block; margin-bottom: 10px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; min-width: 340px; max-width: 440px; width: 90%; }
+  .modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+  .modal label { font-size: 13px; color: var(--text-sec); display: block; margin-bottom: 4px; margin-top: 12px; }
+  .modal input[type=text], .modal input[type=date], .modal select {
+    width: 100%; padding: 8px 10px; font-size: 13px; font-family: var(--font);
+    background: var(--bg); color: var(--text); border: 0.5px solid var(--border-sec);
+    border-radius: var(--radius-md); margin-bottom: 2px;
+  }
+  .modal input:focus, .modal select:focus { outline: none; border-color: var(--border-info); box-shadow: 0 0 0 2px rgba(24,95,165,0.15); }
+  .modal-btns { display: flex; gap: 8px; margin-top: 1.2rem; }
+  .modal-btns button { flex: 1; }
+  .day-toggle { width: 36px; height: 30px; border-radius: var(--radius-md); border: 0.5px solid var(--border-sec); font-size: 11px; cursor: pointer; background: var(--bg); color: var(--text-sec); font-family: var(--font); }
+  .day-toggle.active { background: #e1f5ee; color: #085041; border-color: #5dcaa5; font-weight: 500; }
+  .pattern-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .pattern-label { font-size: 12px; color: var(--text-sec); margin: 8px 0 4px; }
+  .monthly-grid { display: grid; grid-template-columns: 44px repeat(5, 32px); gap: 4px; align-items: center; }
+  .monthly-grid .col-hdr { font-size: 10px; color: var(--text-sec); text-align: center; font-weight: 500; }
+  .monthly-grid .row-lbl { font-size: 12px; color: var(--text-sec); font-weight: 500; }
+  .monthly-cb { width: 18px; height: 18px; cursor: pointer; accent-color: #1d9e75; margin: auto; display: block; }
+
+  .stats-wrap { overflow-x: auto; }
+  .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .stats-table th { background: var(--bg-sec); padding: 10px 12px; text-align: left; border: 0.5px solid var(--border); font-weight: 500; font-size: 11px; color: var(--text-sec); white-space: nowrap; position: sticky; top: 0; }
+  .stats-table th.num { text-align: center; }
+  .stats-table td { padding: 10px 12px; border: 0.5px solid var(--border); color: var(--text); }
+  .stats-table td.num { text-align: center; font-weight: 500; }
+  .stats-table tr:hover td { background: var(--bg-sec); }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+  .badge-w { background: #e1f5ee; color: #085041; }
+  .badge-v { background: #e6f1fb; color: #0c447c; }
+  .badge-z { background: #fcebeb; color: #791f1f; }
+  .badge-t { background: #eeedfe; color: #3c3489; }
+  .badge-s { background: #faeeda; color: #633806; }
+  .badge-zv { background: #fbeaf0; color: #72243e; }
+  .period-info { font-size: 12px; color: var(--text-sec); margin-bottom: 14px; }
+  .warn-row td { background: #fcebeb; border-color: #f7c1c1; font-size: 11px; font-weight: 500; color: #791f1f; }
+  .warn-row td.name-col { background: #fcebeb; }
+  .warn-badge { display:inline-block; background:#e24b4a; color:#fff; border-radius:99px; font-size:10px; font-weight:500; padding:1px 6px; min-width:18px; text-align:center; }
+  .warn-ok { color:#1d9e75; font-size:11px; }
+  .short-cell { background:#fcebeb !important; }
+  .warn-card { background:var(--bg); border:0.5px solid var(--border); border-radius:var(--radius-lg); margin-bottom:16px; overflow:hidden; }
+  .warn-card-header { padding:12px 16px; background:var(--bg-sec); border-bottom:0.5px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .warn-card-header h3 { font-size:14px; font-weight:500; flex:1; }
+  .warn-tag { background:#fcebeb; color:#791f1f; font-size:11px; font-weight:500; padding:2px 8px; border-radius:99px; }
+  .warn-tag-ok { background:#e1f5ee; color:#085041; font-size:11px; font-weight:500; padding:2px 8px; border-radius:99px; }
+  .warn-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .warn-table th { background:var(--bg-sec); padding:6px 10px; text-align:center; border:0.5px solid var(--border); font-weight:500; color:var(--text-sec); white-space:nowrap; }
+  .warn-table th:first-child { text-align:left; }
+  .warn-table td { padding:6px 10px; border:0.5px solid var(--border); text-align:center; }
+  .warn-table td:first-child { text-align:left; font-weight:500; }
+  .warn-table tr.has-short td { background:#fcebeb; color:#791f1f; }
+  .warn-table tr.ok-row td { color:var(--text-sec); }
+  .disc-min-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:0.5px solid var(--border); }
+  .disc-min-row:last-child { border-bottom:none; }
+  .disc-min-label { flex:1; font-size:13px; }
+  .disc-min-days { display:flex; gap:6px; flex-wrap:wrap; }
+  .disc-min-day { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .disc-min-day label { font-size:10px; color:var(--text-sec); }
+  .disc-min-day input { width:40px; padding:4px 6px; font-size:12px; text-align:center; font-family:var(--font); background:var(--bg); color:var(--text); border:0.5px solid var(--border-sec); border-radius:var(--radius-md); }
+
+  /* ── MOBILE ── */
+  @media (max-width: 640px) {
+    .header { padding: 12px 16px; gap: 8px; }
+    .header .subtitle { display: none; }
+    .main { padding: 12px 16px; }
+
+    /* Tabs: scrollable, smaller */
+    .tabs { overflow-x: auto; white-space: nowrap; display: flex; gap: 0; }
+    .tab { padding: 8px 14px; font-size: 12px; flex-shrink: 0; }
+
+    /* Toolbar: stacked */
+    .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+    .month-nav { justify-content: center; }
+    .month-label { font-size: 14px; min-width: 140px; }
+    #toolbar-btns { display: flex; gap: 8px; }
+    #toolbar-btns .btn { flex: 1; font-size: 12px; padding: 8px 10px; text-align: center; }
+
+    /* Hide desktop table, show mobile cards */
+    .roster-wrap { display: none; }
+    #mobile-roster { display: block; }
+
+    /* Legend: 2 columns */
+    .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    /* Modals: full width bottom sheet */
+    .modal { min-width: unset; max-width: 100%; width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; position: fixed; bottom: 0; left: 0; right: 0; max-height: 90vh; overflow-y: auto; }
+    .modal-overlay.open { align-items: flex-end; }
+
+    /* Stats table: scrollable */
+    .stats-wrap { overflow-x: auto; }
+    .stats-table { font-size: 11px; }
+    .stats-table th, .stats-table td { padding: 6px 8px; }
+
+    /* Settings: stack min-day inputs */
+    .disc-min-row { flex-wrap: wrap; }
+    .disc-min-days { flex-wrap: wrap; }
+  }
+
+  /* Mobile roster cards */
+  #mobile-roster { display: none; }
+  .mob-emp-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 12px; overflow: hidden; }
+  .mob-emp-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 0.5px solid var(--border); cursor: pointer; }
+  .mob-emp-name { font-weight: 500; font-size: 14px; }
+  .mob-emp-disc { font-size: 11px; color: var(--text-sec); margin-top: 1px; }
+  .mob-emp-actions { display: flex; gap: 6px; align-items: center; }
+  .mob-days { padding: 10px 14px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .mob-day { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .mob-day-label { font-size: 9px; color: var(--text-ter); font-weight: 500; }
+  .mob-day-num { font-size: 9px; color: var(--text-ter); }
+  .mob-day-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; cursor: pointer; border: 0.5px solid transparent; }
+  .mob-day-dot:active { filter: brightness(0.88); }
+  .mob-day-dot.s-w { background: #e1f5ee; color: #085041; }
+  .mob-day-dot.s-v { background: #e6f1fb; color: #0c447c; }
+  .mob-day-dot.s-z { background: #fcebeb; color: #791f1f; }
+  .mob-day-dot.s-t { background: #eeedfe; color: #3c3489; }
+  .mob-day-dot.s-s { background: #faeeda; color: #633806; }
+  .mob-day-dot.s-zv { background: #fbeaf0; color: #72243e; }
+  .mob-day-dot.s-feest { background: #fac775; color: #412402; }
+  .mob-day-dot.s-none { background: var(--bg-sec); color: var(--text-ter); }
+  .mob-day-dot.s-we { background: var(--bg-ter); color: var(--text-ter); }
+  .mob-week-nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 4px; }
+  .mob-week-label { font-size: 12px; color: var(--text-sec); font-weight: 500; }
+  .mob-week-btn { background: none; border: none; font-size: 18px; color: var(--text-sec); cursor: pointer; padding: 0 6px; }
+
+  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-size:13px;color:var(--text-sec);}
+  .loading-overlay.show{display:flex;}
+  .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--text-info);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:var(--bg);padding:10px 18px;border-radius:var(--radius-md);font-size:13px;z-index:600;opacity:0;transition:opacity 0.3s;}
+  .toast.show{opacity:1;}
+  .setup-wrap{max-width:580px;margin:40px auto;}
+  .setup-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem;margin-bottom:16px;}
+  .setup-card h2{font-size:16px;font-weight:500;margin-bottom:10px;}
+  .setup-card p{font-size:13px;color:var(--text-sec);line-height:1.7;margin-bottom:10px;}
+  .setup-card input{width:100%;padding:8px 10px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);border:0.5px solid var(--border-sec);border-radius:var(--radius-md);margin-bottom:10px;}
+  .setup-card input:focus{outline:none;border-color:var(--border-info);}
+  .step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--bg-info);color:var(--text-info);font-size:11px;font-weight:500;margin-right:6px;}
+  code{background:var(--bg-sec);padding:1px 5px;border-radius:4px;font-size:12px;font-family:monospace;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="ti-alert-triangle" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></symbol><symbol id="ti-calendar" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></symbol><symbol id="ti-calendar-edit" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M9 11l3 3L22 4M16 5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M8 2v4M16 2v4M3 10h18"/></symbol><symbol id="ti-calendar-stats" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 2v4M16 2v4M3 10h18M8 14h1M12 14h1M16 14h1M8 18h1M12 18h1"/></symbol><symbol id="ti-calendar-week" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 2v4M16 2v4M3 10h18M8 14h8"/></symbol><symbol id="ti-chart-bar" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M3 3v18h18M7 16l4-4 4 4 4-6"/></symbol><symbol id="ti-check" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M5 12l5 5L20 7"/></symbol><symbol id="ti-chevron-left" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M15 18l-6-6 6-6"/></symbol><symbol id="ti-chevron-right" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M9 18l6-6-6-6"/></symbol><symbol id="ti-device-floppy" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M6 4h10l4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM10 14a2 2 0 1 0 4 0 2 2 0 0 0-4 0M8 4v4h6V4"/></symbol><symbol id="ti-dots-vertical" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM12 13a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM12 20a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></symbol><symbol id="ti-info-circle" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 8v4M12 16h.01"/></symbol><symbol id="ti-plus" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M12 5v14M5 12h14"/></symbol><symbol id="ti-settings" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol><symbol id="ti-trash" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol><symbol id="ti-user-plus" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0M3 21v-2a4 4 0 0 1 4-4h5M16 19h6M19 16v6"/></symbol><symbol id="ti-users" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M9 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0M3 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol><symbol id="ti-x" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M18 6L6 18M6 6l12 12"/></symbol></svg>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <span id="loading-text">Laden...</span>
+</div>
+<div class="toast" id="toast"></div>
+
+<div id="setup-screen" style="display:none;">
+  <div id="app" style="display:none;">
+<div class="header">
+    <div class="header-title" style="font-size:16px;font-weight:500;">Aanwezigheidsrooster</div>
+    <div style="font-size:12px;color:var(--text-sec);margin-left:8px;">— eerste keer instellen</div>
+  </div>
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <h2>Eénmalige instelling</h2>
+      <p>Het rooster slaat data op in Microsoft Lists op jullie SharePoint. Vul hieronder de URL in van de SharePoint-site. Daarna werkt alles automatisch.</p>
+      <p><span class="step-num">1</span> Ga naar jullie SharePoint-site (bijv. via Teams → klik op het SharePoint-icoontje van het kanaal).</p>
+      <p><span class="step-num">2</span> Kopieer de URL uit de adresbalk: <code>https://bedrijfsnaam.sharepoint.com/sites/Teamnaam</code></p>
+      <p><span class="step-num">3</span> Plak de URL hieronder en klik op Verbinden.</p>
+      <input type="text" id="setup-url" placeholder="https://bedrijfsnaam.sharepoint.com/sites/Teamnaam">
+      <button class="btn btn-primary" onclick="setupAndConnect()" style="width:100%;padding:10px;">Verbinden met SharePoint</button>
+    </div>
+    <div class="setup-card">
+      <h2>Hoe werkt dit?</h2>
+      <p>Het rooster gebruikt de SharePoint REST API — dit werkt automatisch met je Microsoft 365-account. Er is geen app-registratie of IT-beheerder nodig.</p>
+      <p><strong>Vereiste:</strong> open deze pagina vanuit de Azure-URL die je hebt aangemaakt. De eerste keer vul je de SharePoint-URL in, daarna wordt die onthouden.</p>
+    </div>
+  </div>
+</div>
+
+<style>.ti{display:inline-block;width:1em;height:1em;vertical-align:-0.125em;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill:none;}</style>
+
+<div class="header">
+  <svg class="ti" style="font-size:22px; color:#378add;" aria-hidden="true"><use href="#ti-calendar-stats"/></svg>
+  <div>
+    <div class="h1" style="font-size:16px;font-weight:500;">Aanwezigheidsrooster</div>
+    <div class="subtitle" id="header-subtitle">Medewerkers · Aanwezigheid · Afwezigheid</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('rooster')"><svg class="ti" style="font-size:14px;margin-right:5px;" aria-hidden="true"><use href="#ti-calendar"/></svg>Rooster</div>
+    <div class="tab" onclick="switchTab('overzicht')"><svg class="ti" style="font-size:14px;margin-right:5px;" aria-hidden="true"><use href="#ti-chart-bar"/></svg>Overzicht</div>
+    <div class="tab" onclick="switchTab('instellingen')"><svg class="ti" style="font-size:14px;margin-right:5px;" aria-hidden="true"><use href="#ti-settings"/></svg>Instellingen</div>
+    <div class="tab" onclick="switchTab('waarschuwingen')"><svg class="ti" style="font-size:14px;margin-right:5px;" aria-hidden="true"><use href="#ti-alert-triangle"/></svg>Waarschuwingen <span id="warn-count-badge" style="display:none;background:#e24b4a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;"></span></div>
+  </div>
+
+  <div id="tab-rooster" class="tab-content active">
+    <div class="toolbar">
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)" aria-label="Vorige maand"><svg class="ti" style="font-size:16px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-chevron-left"/></svg></button>
+        <span class="month-label" id="month-label"></span>
+        <button onclick="changeMonth(1)" aria-label="Volgende maand"><svg class="ti" style="font-size:16px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-chevron-right"/></svg></button>
+      </div>
+      <div id="toolbar-btns">
+        <button class="btn" id="weekend-toggle-btn" onclick="toggleWeekends()">
+          <svg class="ti" aria-hidden="true"><use href="#ti-calendar-week"/></svg> Weekenden <span id="weekend-label" style="font-size:12px;">verbergen</span>
+        </button>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <svg class="ti" aria-hidden="true"><use href="#ti-plus"/></svg> Medewerker toevoegen
+        </button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="leg-item"><span class="leg-dot" style="background:#e1f5ee;border:1px solid #5dcaa5"></span>Aanwezig</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#e6f1fb;border:1px solid #85b7eb"></span>Vakantie</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#fcebeb;border:1px solid #f09595"></span>Ziek</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#eeedfe;border:1px solid #afa9ec"></span>Thuiswerken</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#faeeda;border:1px solid #fac775"></span>Scholing</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#fbeaf0;border:1px solid #ed93b1"></span>Zwangerschapsverlof</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#fac775;border:1px solid #ef9f27"></span>Feestdag</span>
+    </div>
+
+    <div class="card">
+      <div class="roster-wrap">
+        <table id="roster-table">
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display:none;">
+          <svg class="ti" aria-hidden="true"><use href="#ti-users"/></svg>
+          Nog geen medewerkers. Klik op "Medewerker toevoegen" om te beginnen.
+        </div>
+      </div>
+    </div>
+    <div id="mobile-roster"></div>
+  </div>
+
+  <div id="tab-overzicht" class="tab-content">
+    <div class="period-info" id="period-info"></div>
+    <div class="card">
+      <div class="stats-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th style="min-width:140px;">Naam</th>
+              <th style="min-width:110px;">Discipline</th>
+              <th class="num"><span class="badge badge-w">Aanwezig</span></th>
+              <th class="num"><span class="badge badge-v">Vakantie</span></th>
+              <th class="num"><span class="badge badge-z">Ziek</span></th>
+              <th class="num"><span class="badge badge-t">Thuiswerken</span></th>
+              <th class="num"><span class="badge badge-s">Scholing</span></th>
+              <th class="num"><span class="badge badge-zv">Zwanger</span></th>
+              <th class="num" style="color:var(--text-sec);">Totaal</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+        <div id="stats-empty" class="empty-state" style="display:none;">
+          <svg class="ti" aria-hidden="true"><use href="#ti-users"/></svg>
+          Nog geen medewerkers toegevoegd.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-instellingen" class="tab-content">
+    <div style="max-width:660px;">
+      <h2 style="font-size:16px;font-weight:500;margin-bottom:4px;">Team</h2>
+      <p style="font-size:13px;color:var(--text-sec);margin-bottom:12px;">De teamnaam wordt weergegeven in de header van het rooster.</p>
+      <div class="card" style="padding:1rem 1.25rem;margin-bottom:20px;">
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="team-name-input" placeholder="bijv. Afdeling Verpleging" style="flex:1;padding:8px 10px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);border:0.5px solid var(--border-sec);border-radius:var(--radius-md);" oninput="saveTeamName()">
+        </div>
+      </div>
+      <h2 style="font-size:16px;font-weight:500;margin-bottom:4px;">Disciplines</h2>
+      <p style="font-size:13px;color:var(--text-sec);margin-bottom:16px;">Voeg disciplines toe en stel per werkdag het minimumaantal benodigde medewerkers in.</p>
+      <div class="card" style="padding:1rem 1.25rem;margin-bottom:20px;">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <input type="text" id="new-disc-input" placeholder="bijv. Verpleegkundige" style="flex:1;padding:8px 10px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);border:0.5px solid var(--border-sec);border-radius:var(--radius-md);" onkeydown="if(event.key==='Enter')addDiscipline()">
+          <button class="btn btn-primary" onclick="addDiscipline()"><svg class="ti" aria-hidden="true"><use href="#ti-plus"/></svg> Toevoegen</button>
+        </div>
+        <div id="disc-empty" style="font-size:13px;color:var(--text-ter);padding:8px 0;display:none;">Nog geen disciplines toegevoegd.</div>
+        <div id="disc-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-waarschuwingen" class="tab-content">
+    <p style="font-size:13px;color:var(--text-sec);margin-bottom:16px;">Overzicht van dagen waarop het minimumaantal aanwezige medewerkers per discipline niet gehaald wordt.</p>
+    <div id="warn-content"></div>
+  </div>
+</div>
+
+<div id="modal-add" class="modal-overlay" onclick="closeModalBg(event,'modal-add')">
+  <div class="modal">
+    <h3>Medewerker toevoegen</h3>
+    <label>Naam</label>
+    <input type="text" id="add-name" placeholder="Voornaam Achternaam">
+    <label>Discipline / Functie</label>
+    <select id="add-disc"><option value="">— Kies een discipline —</option></select>
+    <label>Aanwezigheidspatroon</label>
+    <select id="add-pattern-type" onchange="renderPatternUI()">
+      <option value="weekly">Wekelijks</option>
+      <option value="biweekly">Tweewekelijks</option>
+      <option value="monthly">Maandelijks (per weekpositie)</option>
+    </select>
+    <div id="pattern-week1">
+      <div class="pattern-label">Werkdagen (elke week)</div>
+      <div class="pattern-row" id="pw1"></div>
+    </div>
+    <div id="pattern-week2" style="display:none;">
+      <div class="pattern-label">Week 1 (oneven weken)</div>
+      <div class="pattern-row" id="pw1b"></div>
+      <div class="pattern-label">Week 2 (even weken)</div>
+      <div class="pattern-row" id="pw2"></div>
+    </div>
+    <div id="pattern-monthly" style="display:none;">
+      <div class="pattern-label" style="margin-bottom:8px;">Aanwezig op: vink de combinaties aan</div>
+      <div id="pm-grid"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-add')"><svg class="ti" style="font-size:14px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-x"/></svg> Annuleren</button>
+      <button class="btn btn-primary" onclick="addEmployee()"><svg class="ti" style="font-size:14px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-user-plus"/></svg> Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-day" class="modal-overlay" onclick="closeModalBg(event,'modal-day')">
+  <div class="modal">
+    <h3 id="modal-day-title">Status instellen</h3>
+    <label>Status voor deze dag</label>
+    <select id="day-status-select">
+      <option value="none">— Verwijder status —</option>
+      <option value="w">Aanwezig</option>
+      <option value="v">Vakantie</option>
+      <option value="z">Ziek</option>
+      <option value="t">Thuiswerken</option>
+      <option value="s">Scholing</option>
+      <option value="zv">Zwangerschapsverlof</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:12px;">
+      <input type="checkbox" id="day-range-check" onchange="toggleRangeInputs()"> Meerdere dagen instellen
+    </label>
+    <div id="day-range-inputs" style="display:none;margin-top:10px;">
+      <label>Van</label>
+      <input type="date" id="range-from">
+      <label>Tot en met</label>
+      <input type="date" id="range-to">
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-day')"><svg class="ti" style="font-size:14px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-x"/></svg> Annuleren</button>
+      <button class="btn btn-primary" onclick="applyDayStatus()"><svg class="ti" style="font-size:14px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-device-floppy"/></svg> Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-emp" class="modal-overlay" onclick="closeModalBg(event,'modal-emp')">
+  <div class="modal">
+    <h3 id="modal-emp-title">Medewerker</h3>
+    <div class="modal-btns" style="flex-direction:column;">
+      <button class="btn" onclick="openEditPatternModal()"><svg class="ti" style="font-size:15px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-calendar-edit"/></svg> Patroon bewerken</button>
+      <button class="btn btn-danger" onclick="removeEmployee()"><svg class="ti" style="font-size:15px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-trash"/></svg> Verwijderen</button>
+      <button class="btn" onclick="closeModal('modal-emp')"><svg class="ti" style="font-size:15px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-x"/></svg> Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-edit-pattern" class="modal-overlay" onclick="closeModalBg(event,'modal-edit-pattern')">
+  <div class="modal">
+    <h3 id="modal-edit-pattern-title">Patroon bewerken</h3>
+    <label>Type patroon</label>
+    <select id="edit-pattern-type" onchange="renderEditPatternUI()">
+      <option value="weekly">Wekelijks</option>
+      <option value="biweekly">Tweewekelijks</option>
+      <option value="monthly">Maandelijks (per weekpositie)</option>
+    </select>
+    <div id="edit-pattern-week1">
+      <div class="pattern-label">Werkdagen (elke week)</div>
+      <div class="pattern-row" id="epw1"></div>
+    </div>
+    <div id="edit-pattern-week2" style="display:none;">
+      <div class="pattern-label">Week 1 (oneven weken)</div>
+      <div class="pattern-row" id="epw1b"></div>
+      <div class="pattern-label">Week 2 (even weken)</div>
+      <div class="pattern-row" id="epw2"></div>
+    </div>
+    <div id="edit-pattern-monthly" style="display:none;">
+      <div class="pattern-label" style="margin-bottom:8px;">Aanwezig op: vink de combinaties aan</div>
+      <div id="epm-grid"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-sec);margin-top:12px;line-height:1.5;">
+      <svg class="ti" style="font-size:13px;vertical-align:-1px;" aria-hidden="true"><use href="#ti-info-circle"/></svg>
+      Handmatig ingestelde statussen blijven ongewijzigd.
+    </p>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal('modal-edit-pattern')"><svg class="ti" style="font-size:14px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-x"/></svg> Annuleren</button>
+      <button class="btn btn-primary" onclick="saveEditPattern()"><svg class="ti" style="font-size:14px;vertical-align:-2px;" aria-hidden="true"><use href="#ti-device-floppy"/></svg> Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const NL_HOLIDAYS={"2024-01-01":"Nieuwjaarsdag","2024-03-29":"Goede Vrijdag","2024-03-31":"1e Paasdag","2024-04-01":"2e Paasdag","2024-04-27":"Koningsdag","2024-05-05":"Bevrijdingsdag","2024-05-09":"Hemelvaartsdag","2024-05-19":"1e Pinksterdag","2024-05-20":"2e Pinksterdag","2024-12-25":"1e Kerstdag","2024-12-26":"2e Kerstdag","2025-01-01":"Nieuwjaarsdag","2025-04-18":"Goede Vrijdag","2025-04-20":"1e Paasdag","2025-04-21":"2e Paasdag","2025-04-26":"Koningsdag","2025-05-05":"Bevrijdingsdag","2025-05-29":"Hemelvaartsdag","2025-06-08":"1e Pinksterdag","2025-06-09":"2e Pinksterdag","2025-12-25":"1e Kerstdag","2025-12-26":"2e Kerstdag","2026-01-01":"Nieuwjaarsdag","2026-04-03":"Goede Vrijdag","2026-04-05":"1e Paasdag","2026-04-06":"2e Paasdag","2026-04-27":"Koningsdag","2026-05-05":"Bevrijdingsdag","2026-05-14":"Hemelvaartsdag","2026-05-24":"1e Pinksterdag","2026-05-25":"2e Pinksterdag","2026-12-25":"1e Kerstdag","2026-12-26":"2e Kerstdag","2027-01-01":"Nieuwjaarsdag","2027-03-26":"Goede Vrijdag","2027-03-28":"1e Paasdag","2027-03-29":"2e Paasdag","2027-04-27":"Koningsdag","2027-05-05":"Bevrijdingsdag","2027-05-06":"Hemelvaartsdag","2027-05-16":"1e Pinksterdag","2027-05-17":"2e Pinksterdag","2027-12-25":"1e Kerstdag","2027-12-26":"2e Kerstdag"};
+const DAYS=["Ma","Di","Wo","Do","Vr"];
+const MONTHS_NL=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+
+// ─── SHAREPOINT REST API ──────────────────────────────────────────────────────
+let siteUrl='', requestDigest='';
+
+async function spFetch(method, url, body=null){
+  const headers={'Accept':'application/json;odata=nometadata','Content-Type':'application/json;odata=nometadata'};
+  if(method!=='GET') headers['X-RequestDigest']=requestDigest;
+  if(method==='PATCH'||method==='DELETE') headers['IF-MATCH']='*';
+  if(method==='PATCH') headers['X-HTTP-Method']='MERGE';
+  const opts={method:method==='DELETE'?'POST':method==='PATCH'?'POST':method,headers,credentials:'include'};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch(siteUrl+'/_api/'+url,opts);
+  if(!r.ok){const txt=await r.text();throw new Error('SharePoint fout ('+r.status+'): '+txt.substring(0,200));}
+  if(r.status===204||method==='DELETE') return null;
+  return r.json();
+}
+
+async function getDigest(){
+  const r=await fetch(siteUrl+'/_api/contextinfo',{method:'POST',headers:{'Accept':'application/json;odata=nometadata'},credentials:'include'});
+  const data=await r.json();
+  requestDigest=data.FormDigestValue;
+}
+
+async function ensureList(name, fields){
+  try{
+    const data=await spFetch('GET',`web/lists/getbytitle('${name}')?$select=Id`);
+    return data.Id;
+  }catch(e){
+    await spFetch('POST','web/lists',{Title:name,BaseTemplate:100,AllowContentTypes:false});
+    for(const f of fields){
+      try{await spFetch('POST',`web/lists/getbytitle('${name}')/fields`,{Title:f,FieldTypeKind:2,Required:false});}catch(e){}
+      try{await spFetch('POST',`web/lists/getbytitle('${name}')/views/getbytitle('All Items')/viewfields/addviewfield('${f}')`,null);}catch(e){}
+    }
+    const data=await spFetch('GET',`web/lists/getbytitle('${name}')?$select=Id`);
+    return data.Id;
+  }
+}
+
+const LIST_EMP='Rooster_Medewerkers',LIST_ST='Rooster_Statussen',LIST_DISC='Rooster_Disciplines';
+
+async function loadData(){
+  const [empRaw,stRaw,discRaw]=await Promise.all([
+    spFetch('GET',`web/lists/getbytitle('${LIST_EMP}')/items?$select=Id,Title,Discipline,PatternType,Pattern1,Pattern2,PatternMonthly&$top=500`),
+    spFetch('GET',`web/lists/getbytitle('${LIST_ST}')/items?$select=Id,Title,DateStr,Status&$top=9999`),
+    spFetch('GET',`web/lists/getbytitle('${LIST_DISC}')/items?$select=Id,Title,Mins&$top=200`),
+  ]);
+  employees=(empRaw.value||[]).map(i=>({
+    id:i.Id,name:i.Title||'',disc:i.Discipline||'',
+    patternType:i.PatternType||'weekly',
+    pattern1:JSON.parse(i.Pattern1||'[true,true,true,true,true]'),
+    pattern2:JSON.parse(i.Pattern2||'[true,true,true,true,true]'),
+    patternMonthly:i.PatternMonthly?JSON.parse(i.PatternMonthly):Array.from({length:5},()=>[true,true,true,true,true]),
+    overrides:{}
+  }));
+  (stRaw.value||[]).forEach(i=>{
+    const emp=employees.find(e=>e.id===parseInt(i.Title));
+    if(emp)emp.overrides[i.DateStr]={status:i.Status,itemId:i.Id};
+  });
+  disciplines=(discRaw.value||[]).map(i=>({
+    id:i.Id,name:i.Title||'',
+    mins:JSON.parse(i.Mins||'[0,0,0,0,0]')
+  }));
+}
+
+async function spSaveEmployee(emp){
+  const fields={Title:emp.name,Discipline:emp.disc,PatternType:emp.patternType,
+    Pattern1:JSON.stringify(emp.pattern1),Pattern2:JSON.stringify(emp.pattern2),
+    PatternMonthly:JSON.stringify(emp.patternMonthly||Array.from({length:5},()=>[true,true,true,true,true]))};
+  if(emp.id){await spFetch('PATCH',`web/lists/getbytitle('${LIST_EMP}')/items(${emp.id})`,{fields});}
+  else{const d=await spFetch('POST',`web/lists/getbytitle('${LIST_EMP}')/items`,{fields});emp.id=d.Id;}
+}
+
+async function spRemoveEmployee(emp){
+  await spFetch('DELETE',`web/lists/getbytitle('${LIST_EMP}')/items(${emp.id})`);
+  await Promise.all(Object.values(emp.overrides).map(ov=>spFetch('DELETE',`web/lists/getbytitle('${LIST_ST}')/items(${ov.itemId})`)));
+}
+
+async function spSetStatus(emp,dateStr,status){
+  const existing=emp.overrides[dateStr];
+  if(status==='none'){
+    if(existing){await spFetch('DELETE',`web/lists/getbytitle('${LIST_ST}')/items(${existing.itemId})`);delete emp.overrides[dateStr];}
+    return;
+  }
+  if(existing){
+    await spFetch('PATCH',`web/lists/getbytitle('${LIST_ST}')/items(${existing.itemId})`,{fields:{Status:status}});
+    emp.overrides[dateStr].status=status;
+  }else{
+    const d=await spFetch('POST',`web/lists/getbytitle('${LIST_ST}')/items`,{fields:{Title:String(emp.id),DateStr:dateStr,Status:status}});
+    emp.overrides[dateStr]={status,itemId:d.Id};
+  }
+}
+
+async function spSaveDiscipline(disc){
+  const fields={Title:disc.name,Mins:JSON.stringify(disc.mins)};
+  if(disc.id){await spFetch('PATCH',`web/lists/getbytitle('${LIST_DISC}')/items(${disc.id})`,{fields});}
+  else{const d=await spFetch('POST',`web/lists/getbytitle('${LIST_DISC}')/items`,{fields});disc.id=d.Id;}
+}
+
+async function spRemoveDiscipline(disc){
+  await spFetch('DELETE',`web/lists/getbytitle('${LIST_DISC}')/items(${disc.id})`);
+}
+
+function showLoading(txt='Laden...'){document.getElementById('loading-text').textContent=txt;document.getElementById('loading').classList.add('show');}
+function hideLoading(){document.getElementById('loading').classList.remove('show');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function getConfig(){return JSON.parse(localStorage.getItem('rooster_sp_config')||'null');}
+function saveConfig(cfg){localStorage.setItem('rooster_sp_config',JSON.stringify(cfg));}
+
+async function setupAndConnect(){
+  let url=document.getElementById('setup-url').value.trim().replace(/\/+$/,'');
+  if(!url){alert('Vul de SharePoint URL in.');return;}
+  showLoading('Verbinding testen...');
+  try{
+    siteUrl=url;
+    await getDigest();
+    showLoading('Lijsten aanmaken...');
+    await ensureList(LIST_EMP,['Discipline','PatternType','Pattern1','Pattern2','PatternMonthly']);
+    await ensureList(LIST_ST,['DateStr','Status']);
+    await ensureList(LIST_DISC,['Mins']);
+    saveConfig({siteUrl:url});
+    showLoading('Data laden...');
+    await loadData();
+    showApp();
+    hideLoading();
+  }catch(e){
+    hideLoading();
+    alert('Verbinding mislukt. Controleer of:\n• De URL klopt\n• Je toegang hebt tot deze SharePoint-site\n\nFoutmelding: '+e.message);
+  }
+}
+
+function showApp(){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+async function init(){
+  const cfg=getConfig();
+  if(!cfg){document.getElementById('setup-screen').style.display='block';return;}
+  showLoading('Verbinden met SharePoint...');
+  try{
+    siteUrl=cfg.siteUrl;
+    await getDigest();
+    await ensureList(LIST_EMP,['Discipline','PatternType','Pattern1','Pattern2','PatternMonthly']);
+    await ensureList(LIST_ST,['DateStr','Status']);
+    await ensureList(LIST_DISC,['Mins']);
+    showLoading('Data laden...');
+    await loadData();
+    showApp();
+    hideLoading();
+  }catch(e){
+    hideLoading();
+    localStorage.removeItem('rooster_sp_config');
+    document.getElementById('setup-screen').style.display='block';
+  }
+}
+
+let currentYear=new Date().getFullYear();
+let currentMonth=new Date().getMonth();
+let employees=[];
+let currentDayCell=null;
+let currentEmpIdx=null;
+let patternDays1=[true,true,true,true,true];
+let patternDays2=[true,true,true,true,true];
+// patternMonthly: 5x5 array [dayIdx 0-4][weekInMonth 0-4] → true/false
+let patternMonthly=Array.from({length:5},()=>[true,true,true,true,true]);
+
+function toISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function isWeekend(d){return d.getDay()===0||d.getDay()===6;}
+function isHoliday(d){return !!NL_HOLIDAYS[toISO(d)];}
+function getWeekNumber(d){const jan4=new Date(d.getFullYear(),0,4);return Math.ceil(((d-jan4)/86400000+jan4.getDay()+1)/7);}
+
+function weekInMonth(d){
+  // Which occurrence of this weekday in this month? (0-based: 0=1st, 1=2nd, ...)
+  return Math.floor((d.getDate()-1)/7);
+}
+
+function isWorking(emp,d){
+  const dow=d.getDay();
+  if(dow===0||dow===6)return false;
+  const i=dow-1;
+  if(emp.patternType==='weekly')return emp.pattern1[i];
+  if(emp.patternType==='biweekly')return getWeekNumber(d)%2===1?emp.pattern1[i]:emp.pattern2[i];
+  if(emp.patternType==='monthly'){
+    const wim=weekInMonth(d);
+    return emp.patternMonthly[i]?.[wim]!==false;
+  }
+  return true;
+}
+
+let showWeekends=false;
+
+function toggleWeekends(){
+  showWeekends=!showWeekends;
+  document.getElementById('weekend-label').textContent=showWeekends?'verbergen':'tonen';
+  loadTeamName();
+render();
+}
+
+function getDaysInMonth(y,m){
+  const days=[];const d=new Date(y,m,1);
+  while(d.getMonth()===m){
+    if(showWeekends||!isWeekend(d))days.push(new Date(d));
+    d.setDate(d.getDate()+1);
+  }
+  return days;
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['rooster','overzicht','instellingen','waarschuwingen'][i]===name));
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='overzicht')renderStats();
+  if(name==='instellingen'){renderDiscList();loadTeamName();}
+  if(name==='waarschuwingen')renderWaarschuwingen();
+}
+
+function renderStats(){
+  const today=new Date();
+  const start=new Date(today.getFullYear(),0,1);
+  const tbody=document.getElementById('stats-tbody');
+  const empty=document.getElementById('stats-empty');
+  document.getElementById('period-info').textContent=
+    `Periode: 1 januari ${today.getFullYear()} t/m ${today.getDate()} ${MONTHS_NL[today.getMonth()]} ${today.getFullYear()}`;
+  if(!employees.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  let html='';
+  employees.forEach(emp=>{
+    const c={w:0,v:0,z:0,t:0,s:0,zv:0};
+    const cur=new Date(start);
+    while(cur<=today){
+      if(!isWeekend(cur)&&!isHoliday(cur)){
+        const iso=toISO(cur);
+        const ov=emp.overrides[iso];
+        if(ov)c[ov]=(c[ov]||0)+1;
+        else if(isWorking(emp,cur))c.w++;
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+    const total=c.w+c.v+c.z+c.t+c.s+c.zv;
+    html+=`<tr>
+      <td style="font-weight:500;">${emp.name}</td>
+      <td style="font-size:11px;color:var(--text-sec);">${emp.disc}</td>
+      <td class="num">${c.w}</td>
+      <td class="num">${c.v||'—'}</td>
+      <td class="num">${c.z||'—'}</td>
+      <td class="num">${c.t||'—'}</td>
+      <td class="num">${c.s||'—'}</td>
+      <td class="num">${c.zv||'—'}</td>
+      <td class="num" style="color:var(--text-sec);">${total}</td>
+    </tr>`;
+  });
+  tbody.innerHTML=html;
+}
+
+function renderPatternUI(){
+  const type=document.getElementById('add-pattern-type').value;
+  document.getElementById('pattern-week1').style.display=type==='weekly'?'block':'none';
+  document.getElementById('pattern-week2').style.display=type==='biweekly'?'block':'none';
+  document.getElementById('pattern-monthly').style.display=type==='monthly'?'block':'none';
+  if(type==='weekly')renderDayToggles('pw1',patternDays1);
+  else if(type==='biweekly'){renderDayToggles('pw1b',patternDays1);renderDayToggles('pw2',patternDays2);}
+  else if(type==='monthly')renderMonthlyGrid('pm-grid',patternMonthly);
+}
+
+function renderMonthlyGrid(elId, matrix){
+  const el=document.getElementById(elId);if(!el)return;
+  const weekLabels=['1e','2e','3e','4e','5e'];
+  let html='<div class="monthly-grid">';
+  html+='<div class="col-hdr"></div>';
+  weekLabels.forEach(w=>html+=`<div class="col-hdr">${w}</div>`);
+  DAYS.forEach((day,di)=>{
+    html+=`<div class="row-lbl">${day}</div>`;
+    for(let wi=0;wi<5;wi++){
+      const checked=matrix[di]?.[wi]!==false;
+      html+=`<input type="checkbox" class="monthly-cb" ${checked?'checked':''} onchange="updateMonthlyMatrix('${elId}',${di},${wi},this.checked)">`;
+    }
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function updateMonthlyMatrix(elId,di,wi,val){
+  const isEdit=elId.startsWith('e');
+  const matrix=isEdit?editPatternMonthly:patternMonthly;
+  if(!matrix[di])matrix[di]=[];
+  matrix[di][wi]=val;
+}
+
+function renderDayToggles(elId,arr){
+  const el=document.getElementById(elId);if(!el)return;el.innerHTML='';
+  DAYS.forEach((d,i)=>{
+    const btn=document.createElement('button');
+    btn.className='day-toggle'+(arr[i]?' active':'');
+    btn.textContent=d;btn.type='button';
+    btn.onclick=()=>{arr[i]=!arr[i];btn.className='day-toggle'+(arr[i]?' active':'');};
+    el.appendChild(btn);
+  });
+}
+
+function openAddModal(){
+  patternDays1=[true,true,true,true,true];patternDays2=[true,true,true,true,true];
+  patternMonthly=Array.from({length:5},()=>[true,true,true,true,true]);
+  document.getElementById('add-name').value='';
+  document.getElementById('add-pattern-type').value='weekly';
+  const sel=document.getElementById('add-disc');
+  sel.innerHTML='<option value="">— Kies een discipline —</option>';
+  disciplines.forEach(d=>{const o=document.createElement('option');o.value=d.name;o.textContent=d.name;sel.appendChild(o);});
+  renderPatternUI();
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(()=>document.getElementById('add-name').focus(),50);
+}
+
+async function addEmployee(){
+  const name=document.getElementById('add-name').value.trim();
+  const disc=document.getElementById('add-disc').value;
+  if(!name){alert('Vul een naam in.');return;}
+  if(!disc){alert('Kies een discipline.');return;}
+  const type=document.getElementById('add-pattern-type').value;
+  employees.push({name,disc,patternType:type,pattern1:[...patternDays1],pattern2:[...patternDays2],patternMonthly:patternMonthly.map(r=>[...r]),overrides:{}});
+  closeModal('modal-add');render();
+}
+
+function openDayModal(empIdx,dateStr,name){
+  currentDayCell={empIdx,dateStr};
+  const d=new Date(dateStr);
+  document.getElementById('modal-day-title').textContent=`${name} — ${d.getDate()} ${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}`;
+  document.getElementById('day-status-select').value=employees[empIdx].overrides[dateStr]||'none';
+  document.getElementById('day-range-check').checked=false;
+  document.getElementById('day-range-inputs').style.display='none';
+  document.getElementById('range-from').value=dateStr;
+  document.getElementById('range-to').value=dateStr;
+  document.getElementById('modal-day').classList.add('open');
+}
+
+function toggleRangeInputs(){
+  document.getElementById('day-range-inputs').style.display=document.getElementById('day-range-check').checked?'block':'none';
+}
+
+async function applyDayStatus(){
+  const{empIdx,dateStr}=currentDayCell;
+  const status=document.getElementById('day-status-select').value;
+  if(document.getElementById('day-range-check').checked){
+    const from=new Date(document.getElementById('range-from').value);
+    const to=new Date(document.getElementById('range-to').value);
+    const cur=new Date(from);
+    while(cur<=to){
+      const iso=toISO(cur);
+      if(!isWeekend(cur)&&!isHoliday(cur)){
+        if(status==='none')delete employees[empIdx].overrides[iso];
+        else employees[empIdx].overrides[iso]=status;
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+  } else {
+    if(status==='none')delete employees[empIdx].overrides[dateStr];
+    else employees[empIdx].overrides[dateStr]=status;
+  }
+  closeModal('modal-day');render();
+}
+
+let editPatternDays1=[true,true,true,true,true];
+let editPatternDays2=[true,true,true,true,true];
+let editPatternMonthly=Array.from({length:5},()=>[true,true,true,true,true]);
+
+function openEmpModal(idx){
+  currentEmpIdx=idx;
+  document.getElementById('modal-emp-title').textContent=employees[idx].name+' — '+employees[idx].disc;
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+function openEditPatternModal(){
+  closeModal('modal-emp');
+  const emp=employees[currentEmpIdx];
+  editPatternDays1=[...emp.pattern1];
+  editPatternDays2=[...emp.pattern2];
+  editPatternMonthly=emp.patternMonthly?emp.patternMonthly.map(r=>[...r]):Array.from({length:5},()=>[true,true,true,true,true]);
+  document.getElementById('modal-edit-pattern-title').textContent='Patroon — '+emp.name;
+  document.getElementById('edit-pattern-type').value=emp.patternType;
+  renderEditPatternUI();
+  document.getElementById('modal-edit-pattern').classList.add('open');
+}
+
+function renderEditPatternUI(){
+  const type=document.getElementById('edit-pattern-type').value;
+  document.getElementById('edit-pattern-week1').style.display=type==='weekly'?'block':'none';
+  document.getElementById('edit-pattern-week2').style.display=type==='biweekly'?'block':'none';
+  document.getElementById('edit-pattern-monthly').style.display=type==='monthly'?'block':'none';
+  if(type==='weekly')renderEditToggles('epw1',editPatternDays1);
+  else if(type==='biweekly'){renderEditToggles('epw1b',editPatternDays1);renderEditToggles('epw2',editPatternDays2);}
+  else if(type==='monthly')renderMonthlyGrid('epm-grid',editPatternMonthly);
+}
+
+function renderEditToggles(elId,arr){
+  const el=document.getElementById(elId);if(!el)return;el.innerHTML='';
+  DAYS.forEach((d,i)=>{
+    const btn=document.createElement('button');
+    btn.className='day-toggle'+(arr[i]?' active':'');
+    btn.textContent=d;btn.type='button';
+    btn.onclick=()=>{arr[i]=!arr[i];btn.className='day-toggle'+(arr[i]?' active':'');};
+    el.appendChild(btn);
+  });
+}
+
+async function saveEditPattern(){
+  const emp=employees[currentEmpIdx];
+  emp.patternType=document.getElementById('edit-pattern-type').value;
+  emp.pattern1=[...editPatternDays1];
+  emp.pattern2=[...editPatternDays2];
+  emp.patternMonthly=editPatternMonthly.map(r=>[...r]);
+  closeModal('modal-edit-pattern');
+  showLoading('Patroon opslaan...');
+  try{await getDigest();await spSaveEmployee(emp);render();showToast('Patroon opgeslagen');}
+  catch(e){alert('Fout: '+e.message);}
+  hideLoading();
+}
+
+async function removeEmployee(){
+  if(!confirm('Medewerker verwijderen?'))return;
+  closeModal('modal-emp');showLoading('Verwijderen...');
+  try{await getDigest();await spRemoveEmployee(emp);employees.splice(idx,1);render();showToast('Medewerker verwijderd');}
+  catch(e){alert('Fout: '+e.message);}
+  hideLoading();
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModalBg(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+function statusHtml(code){
+  const cls={w:'s-w',v:'s-v',z:'s-z',t:'s-t',s:'s-s',zv:'s-zv'};
+  const lbl={w:'✓',v:'V',z:'Z',t:'T',s:'S',zv:'ZV'};
+  const full={w:'Aanwezig',v:'Vakantie',z:'Ziek',t:'Thuiswerken',s:'Scholing',zv:'Zwangerschapsverlof'};
+  return`<span class="status-dot ${cls[code]||'s-none'}" title="${full[code]||''}">${lbl[code]||''}</span>`;
+}
+
+// disciplines: [{name, mins:[Ma,Di,Wo,Do,Vr]}]
+let disciplines=[];
+
+async function addDiscipline(){
+  const input=document.getElementById('new-disc-input');
+  const val=input.value.trim();
+  if(!val)return;
+  if(disciplines.find(d=>d.name===val)){alert('Deze discipline bestaat al.');return;}
+  disciplines.push({name:val,mins:[0,0,0,0,0]});
+  input.value='';
+  renderDiscList();
+  updateWarnBadge();
+}
+
+async function removeDiscipline(idx){
+  disciplines.splice(idx,1);
+  renderDiscList();
+  updateWarnBadge();
+}
+
+async function saveDiscMins(idx){
+  ['ma','di','wo','do','vr'].forEach((day,di)=>{
+    const el=document.getElementById('min-'+idx+'-'+day);
+    if(el)disciplines[idx].mins[di]=Math.max(0,parseInt(el.value)||0);
+  });
+  updateWarnBadge();
+}
+
+function renderDiscList(){
+  const list=document.getElementById('disc-list');
+  const empty=document.getElementById('disc-empty');
+  if(!disciplines.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const dayKeys=['ma','di','wo','do','vr'];
+  const dayLabels=['Ma','Di','Wo','Do','Vr'];
+  list.innerHTML=disciplines.map((d,i)=>`
+    <div class="disc-min-row">
+      <div class="disc-min-label" style="min-width:120px;font-weight:500;">${d.name}</div>
+      <div class="disc-min-days">
+        ${dayLabels.map((lbl,di)=>`
+          <div class="disc-min-day">
+            <label>${lbl}</label>
+            <input type="number" min="0" max="99" id="min-${i}-${dayKeys[di]}" value="${d.mins[di]}" oninput="saveDiscMins(${i})">
+          </div>`).join('')}
+      </div>
+      <button class="btn" onclick="removeDiscipline(${i})" style="padding:3px 8px;font-size:12px;color:var(--text-sec);flex-shrink:0;" title="Verwijderen"><svg class="ti" aria-hidden="true"><use href="#ti-trash"/></svg></button>
+    </div>`).join('');
+}
+
+function getPresent(empIdx, iso){
+  const emp=employees[empIdx];
+  const d=new Date(iso);
+  const ov=emp.overrides[iso];
+  if(ov==='w') return true;
+  if(ov&&ov!=='w') return false;
+  return isWorking(emp,d);
+}
+
+function computeShortages(year,month){
+  // returns {discName: {iso: {present,required,shortage}}}
+  const days=getDaysInMonth(year,month).filter(d=>!isWeekend(d)&&!isHoliday(d));
+  const result={};
+  disciplines.forEach(disc=>{
+    result[disc.name]={};
+    days.forEach(d=>{
+      const iso=toISO(d);
+      const dow=d.getDay()-1; // 0=Ma..4=Vr
+      const required=disc.mins[dow]||0;
+      const present=employees.filter(emp=>emp.disc===disc.name&&getPresent(employees.indexOf(emp),iso)).length;
+      result[disc.name][iso]={present,required,shortage:Math.max(0,required-present)};
+    });
+  });
+  return result;
+}
+
+function updateWarnBadge(){
+  const today=new Date();
+  const year=today.getFullYear(),month=today.getMonth();
+  const shortages=computeShortages(year,month);
+  let total=0;
+  Object.values(shortages).forEach(days=>Object.values(days).forEach(v=>{if(v.shortage>0)total++;}));
+  const badge=document.getElementById('warn-count-badge');
+  if(total>0){badge.textContent=total;badge.style.display='inline';}
+  else badge.style.display='none';
+}
+
+function renderWaarschuwingen(){
+  const el=document.getElementById('warn-content');
+  if(!disciplines.length){el.innerHTML='<p style="font-size:13px;color:var(--text-sec);">Stel eerst disciplines en minimums in via het tabblad Instellingen.</p>';return;}
+  const today=new Date();
+  const year=currentYear,month=currentMonth;
+  const shortages=computeShortages(year,month);
+  let html='';
+  let anyShortage=false;
+  disciplines.forEach(disc=>{
+    const days=shortages[disc.name]||{};
+    const problematic=Object.entries(days).filter(([,v])=>v.shortage>0).sort(([a],[b])=>a.localeCompare(b));
+    const hasShortage=problematic.length>0;
+    if(hasShortage)anyShortage=true;
+    html+=`<div class="warn-card">
+      <div class="warn-card-header">
+        <h3>${disc.name}</h3>
+        ${hasShortage?`<span class="warn-tag"><svg class="ti" style="font-size:12px;vertical-align:-1px;" aria-hidden="true"><use href="#ti-alert-triangle"/></svg> ${problematic.length} dag${problematic.length!==1?'en':''} tekort</span>`:'<span class="warn-tag-ok"><svg class="ti" style="font-size:12px;vertical-align:-1px;" aria-hidden="true"><use href="#ti-check"/></svg> Bezetting voldoet</span>'}
+      </div>`;
+    if(hasShortage){
+      const dayNames2=["","Ma","Di","Wo","Do","Vr"];
+      html+=`<div style="overflow-x:auto;"><table class="warn-table"><thead><tr><th>Datum</th><th>Dag</th><th>Aanwezig</th><th>Minimaal</th><th>Tekort</th></tr></thead><tbody>`;
+      problematic.forEach(([iso,v])=>{
+        const d=new Date(iso);
+        html+=`<tr class="has-short">
+          <td>${d.getDate()} ${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}</td>
+          <td>${dayNames2[d.getDay()]}</td>
+          <td>${v.present}</td>
+          <td>${v.required}</td>
+          <td><span class="warn-badge">-${v.shortage}</span></td>
+        </tr>`;
+      });
+      html+=`</tbody></table></div>`;
+    } else {
+      html+=`<div style="padding:12px 16px;font-size:13px;color:var(--text-sec);">Geen tekorten deze maand.</div>`;
+    }
+    html+=`</div>`;
+  });
+  if(!disciplines.length) html='<p style="color:var(--text-sec);font-size:13px;">Geen disciplines ingesteld.</p>';
+  el.innerHTML=html;
+}
+
+function saveTeamName(){
+  const val=document.getElementById('team-name-input').value.trim();
+  localStorage.setItem('rooster_teamname',val);
+  document.getElementById('header-subtitle').textContent=val||'Medewerkers · Aanwezigheid · Afwezigheid';
+}
+
+function loadTeamName(){
+  const val=localStorage.getItem('rooster_teamname')||'';
+  const input=document.getElementById('team-name-input');
+  if(input)input.value=val;
+  document.getElementById('header-subtitle').textContent=val||'Medewerkers · Aanwezigheid · Afwezigheid';
+}
+
+
+// ── MOBILE ROSTER ─────────────────────────────────────────────────────────────
+let mobileWeekOffset = 0; // offset in days from today's Monday
+
+function getMobileWeekDays(offset) {
+  // Returns 7 days starting from Monday of current week + offset weeks
+  const today = new Date();
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1; // Mon=0
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dow + offset * 7);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+function renderMobile() {
+  const el = document.getElementById('mobile-roster');
+  if (!el) return;
+  const isMobile = window.innerWidth <= 640;
+  if (!isMobile) { el.innerHTML = ''; return; }
+
+  if (!employees.length) {
+    el.innerHTML = '<div class="empty-state">Nog geen medewerkers. Voeg een medewerker toe om te beginnen.</div>';
+    return;
+  }
+
+  const days = getMobileWeekDays(mobileWeekOffset);
+  const dayNames = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+  const weekStart = days[0];
+  const weekEnd = days[6];
+  const fmt = d => `${d.getDate()} ${MONTHS_NL[d.getMonth()]}`;
+  const weekLabel = `${fmt(weekStart)} – ${fmt(weekEnd)}`;
+
+  let html = `<div class="mob-week-nav">
+    <button class="mob-week-btn" onclick="mobileWeekOffset--;renderMobile()">&#8249;</button>
+    <span class="mob-week-label">${weekLabel}</span>
+    <button class="mob-week-btn" onclick="mobileWeekOffset++;renderMobile()">&#8250;</button>
+  </div>`;
+
+  employees.forEach((emp, ei) => {
+    const esc = emp.name.replace(/'/g, "\'");
+    html += `<div class="mob-emp-card">
+      <div class="mob-emp-header" onclick="openEmpModal(${ei})">
+        <div>
+          <div class="mob-emp-name">${emp.name}</div>
+          <div class="mob-emp-disc">${emp.disc}</div>
+        </div>
+        <svg class="ti" style="color:var(--text-ter);font-size:16px;" aria-hidden="true"><use href="#ti-dots-vertical"/></svg>
+      </div>
+      <div class="mob-days">`;
+
+    days.forEach((d, di) => {
+      const iso = toISO(d);
+      const isWe = isWeekend(d);
+      const isHol = isHoliday(d);
+      const ov = emp.overrides[iso]?.status;
+      const lbl = {w:'✓',v:'V',z:'Z',t:'T',s:'S',zv:'ZV'};
+      const full = {w:'Aanwezig',v:'Vakantie',z:'Ziek',t:'Thuiswerken',s:'Scholing',zv:'Zwangerschapsverlof'};
+
+      let cls, text, onclick;
+      if (isHol) {
+        cls = 's-feest'; text = '🎉'; onclick = '';
+      } else if (isWe) {
+        cls = 's-we'; text = '—'; onclick = '';
+      } else if (ov) {
+        cls = 's-' + ov; text = lbl[ov] || ''; onclick = `onclick="openDayModal(${ei},'${iso}','${esc}')"`;
+      } else if (isWorking(emp, d)) {
+        cls = 's-w'; text = '✓'; onclick = `onclick="openDayModal(${ei},'${iso}','${esc}')"`;
+      } else {
+        cls = 's-none'; text = ''; onclick = `onclick="openDayModal(${ei},'${iso}','${esc}')"`;
+      }
+
+      const title = isHol ? NL_HOLIDAYS[iso] : (full[ov] || (isWe ? 'Weekend' : ''));
+      html += `<div class="mob-day">
+        <span class="mob-day-label">${dayNames[di]}</span>
+        <div class="mob-day-dot ${cls}" ${onclick} title="${title}">${text}</div>
+        <span class="mob-day-num">${d.getDate()}</span>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function render(){
+  const days=getDaysInMonth(currentYear,currentMonth);
+  document.getElementById('month-label').textContent=`${MONTHS_NL[currentMonth]} ${currentYear}`;
+  const thead=document.getElementById('thead');
+  const tbody=document.getElementById('tbody');
+  const empty=document.getElementById('empty-state');
+  if(!employees.length){thead.innerHTML='';tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  let th=`<tr><th class="name-col">Naam</th><th class="disc-col">Discipline</th>`;
+  const dayNames=["Zo","Ma","Di","Wo","Do","Vr","Za"];
+  days.forEach(d=>{
+    const iso=toISO(d);const hol=NL_HOLIDAYS[iso];const we=isWeekend(d);
+    let style='';
+    if(hol) style='background:#faeeda;color:#633806;';
+    else if(we) style='background:#f1efe8;color:#888780;';
+    th+=`<th title="${hol||''}" style="${style}">${dayNames[d.getDay()]}<span class="day-info">${d.getDate()}</span></th>`;
+  });
+  th+='</tr>';thead.innerHTML=th;
+  let tb='';
+  employees.forEach((emp,ei)=>{
+    const esc=emp.name.replace(/'/g,"\\'");
+    tb+=`<tr><td class="name-col" onclick="openEmpModal(${ei})" title="Medewerker bewerken">${emp.name} <svg class="ti" style="font-size:12px;color:var(--text-ter);vertical-align:-1px;" aria-hidden="true"><use href="#ti-dots-vertical"/></svg></td><td class="disc-col">${emp.disc}</td>`;
+    days.forEach(d=>{
+      const iso=toISO(d);
+      if(isWeekend(d)&&isHoliday(d)){tb+=`<td class="holiday" style="background:#faeeda;" title="${NL_HOLIDAYS[iso]}"><span class="status-dot s-feest">🎉</span></td>`;return;}
+      if(isWeekend(d)){tb+=`<td style="background:#f1efe8;min-width:30px;border:0.5px solid var(--border);"></td>`;return;}
+      if(isHoliday(d)){tb+=`<td class="holiday" title="${NL_HOLIDAYS[iso]}"><span class="status-dot s-feest">🎉</span></td>`;return;}
+      const ov=emp.overrides[iso];
+      if(ov){tb+=`<td class="day-cell" onclick="openDayModal(${ei},'${iso}','${esc}')" title="${{w:'Aanwezig',v:'Vakantie',z:'Ziek',t:'Thuiswerken',s:'Scholing',zv:'Zwangerschapsverlof'}[ov]}">${statusHtml(ov)}</td>`;return;}
+      const w=isWorking(emp,d);
+      tb+=`<td class="day-cell" onclick="openDayModal(${ei},'${iso}','${esc}')" title="${w?'Aanwezig':'Niet ingeroosterd'}"><span class="status-dot ${w?'s-w':'s-none'}">${w?'✓':''}</span></td>`;
+    });
+    tb+='</tr>';
+  });
+  tbody.innerHTML=tb;
+  updateWarnBadge();
+  renderMobile();
+}
+
+function changeMonth(dir){
+  currentMonth+=dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  render();
+}
+
+render();
+window.addEventListener('resize', () => { renderMobile(); });
+</script>
+</body>
+</html>
